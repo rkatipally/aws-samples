@@ -1,0 +1,38 @@
+{
+  "name": "client-cdk",
+  "version": "0.1.0",
+  "bin": {
+    "client-cdk": "bin/client-cdk.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "test": "jest",
+    "cdk": "cdk",
+    "prepare": "npm run co:login",
+    "co:login": "aws codeartifact login --profile=dh --tool npm --repository cdk-lib --domain fundrise --namespace @fundrise"
+  },
+  "devDependencies": {
+    "@types/jest": "^26.0.10",
+    "@types/node": "10.17.27",
+    "aws-cdk": "2.3.0",
+    "jest": "^26.4.2",
+    "ts-jest": "^26.2.0",
+    "ts-node": "^9.0.0",
+    "typescript": "~3.9.7"
+  },
+  "dependencies": {
+    "@fundrise/cdk-lib": "^0.1.0",
+    "aws-cdk-lib": "2.3.0",
+    "constructs": "^10.0.0"
+  },
+  "description": "You should explore the contents of this project. It demonstrates a CDK app with an instance of a stack (`ClientCdkStack`) which contains an Amazon SQS queue that is subscribed to an Amazon SNS topic.",
+  "main": "jest.config.js",
+  "directories": {
+    "lib": "lib",
+    "test": "test"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
