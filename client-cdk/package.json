@@ -10,7 +10,7 @@
     "test": "jest",
     "cdk": "cdk",
     "prepare": "npm run co:login",
-    "co:login": "aws codeartifact login --profile=dh --tool npm --repository cdk-lib --domain fundrise --namespace @fundrise"
+    "co:login": "aws codeartifact login --tool npm --repository fcp-infra-lib --domain fundrise --namespace @fundrise"
   },
   "devDependencies": {
     "@types/jest": "^26.0.10",
