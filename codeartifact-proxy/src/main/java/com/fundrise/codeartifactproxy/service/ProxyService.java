@@ -6,12 +6,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpRequest;
-import org.apache.http.HttpResponse;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.DefaultRedirectStrategy;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.LaxRedirectStrategy;
 import org.apache.http.protocol.HttpContext;
+import org.apache.tomcat.util.http.fileupload.IOUtils;
+import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.http.*;
 import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
@@ -22,7 +24,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.DefaultUriBuilderFactory;
+import reactor.core.publisher.Flux;
 
+import javax.servlet.http.HttpServletResponse;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -30,7 +34,10 @@ import java.net.ProtocolException;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -56,7 +63,7 @@ public class ProxyService {
                 .header("accept", "application/json")
                 .header("Authorization", "Bearer "+ authorizationTokenResult.getAuthorizationToken())
                 .build();
-        var response = client.send(request, java.net.http.HttpResponse.BodyHandlers.ofString());
+        var response = client.send(request, HttpResponse.BodyHandlers.ofString());
         var responseBody = new ObjectMapper().readValue(response.body(), Object.class);
         HttpHeaders responseHeaders = new HttpHeaders();
         var responseEntity = ResponseEntity.ok().headers(responseHeaders).body(responseBody);
@@ -64,7 +71,7 @@ public class ProxyService {
         return responseEntity;
     }
 
-    public ResponseEntity<InputStream> getPackageContent(String packageZipName) throws IOException, InterruptedException {
+    public ResponseEntity getPackageContent(String packageZipName, HttpServletResponse httpServletResponse) throws IOException, InterruptedException {
         var authorizationTokenRequest = new GetAuthorizationTokenRequest();
         authorizationTokenRequest.withDomain("fundrise");
         log.info("URL:::" + URI.create(FCP_CONSTRUCT_LIB_ENDPOINT + packageZipName));
@@ -104,17 +111,30 @@ public class ProxyService {
                 headers.add("Accept", MediaType.APPLICATION_OCTET_STREAM_VALUE);
 
 
+                restTemplate.execute(
+                        location.get(),
+                        HttpMethod.GET,
+                        null,
+                        responseExtractor -> {
+                            IOUtils.copy(responseExtractor.getBody(), httpServletResponse.getOutputStream());
+                            return null;
+                        });
+
+                /*
+
                 WebClient webClient = WebClient.builder().build();
-                var responseWebClient = webClient.get()
+                var dataBufferFlux = webClient.get()
                         .uri(URI.create( location.get()))
                         .accept(MediaType.APPLICATION_OCTET_STREAM)
                         .header("Accept-Encoding", "gzip, deflate, br")
                         .retrieve()
-                        .bodyToFlux(InputStream.class)
-                        .blockLast();
+                        .bodyToFlux(DataBuffer.class);
+//                DataBufferUtils.write(dataBufferFlux, Paths.get("package.zip"), StandardOpenOption.CREATE).block(); //Creates new file or overwrites exisiting file
 
-//                return restTemplate.exchange(redirectRequest, InputStream.class);
-                return ResponseEntity.ok(responseWebClient);
+                 */
+
+
+                return ResponseEntity.ok().build();
             }
         }
 
@@ -179,7 +199,7 @@ public class ProxyService {
 
     private MappingJackson2HttpMessageConverter jacksonSupportsMoreTypes() {//eg. Gitlab returns JSON as plain text
         MappingJackson2HttpMessageConverter converter = new MappingJackson2HttpMessageConverter();
-        converter.setSupportedMediaTypes(Arrays.asList( MediaType.APPLICATION_OCTET_STREAM));
+        converter.setSupportedMediaTypes(Arrays.asList( MediaType.APPLICATION_JSON, MediaType.APPLICATION_OCTET_STREAM));
         return converter;
     }
 }
