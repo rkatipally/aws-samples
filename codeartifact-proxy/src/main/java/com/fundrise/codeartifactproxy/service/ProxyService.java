@@ -2,7 +2,9 @@ package com.fundrise.codeartifactproxy.service;
 
 import com.amazonaws.services.codeartifact.AWSCodeArtifact;
 import com.amazonaws.services.codeartifact.model.*;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpRequest;
@@ -32,6 +34,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.ProtocolException;
 import java.net.URI;
+import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpResponse;
@@ -50,23 +53,30 @@ public class ProxyService {
 
     private AWSCodeArtifact awsCodeArtifact;
 
-    private static final String FCP_CONSTRUCT_LIB_ENDPOINT = "https://fundrise-631856996037.d.codeartifact.us-east-1.amazonaws.com/npm/fcp-construct-lib/";
+    private static final String FCP_CONSTRUCT_LIB_ENDPOINT = "https://fundrise-631856996037.d.codeartifact.us-east-1.amazonaws.com:443/npm/fcp-construct-lib/";
 
-    public ResponseEntity<Object> getPackageMetadata(String packageName) throws IOException, InterruptedException {
+    public ResponseEntity<JsonNode> getPackageMetadata(String packageName) throws IOException, InterruptedException {
         var authorizationTokenRequest = new GetAuthorizationTokenRequest();
         authorizationTokenRequest.withDomain("fundrise");
         var authorizationTokenResult = awsCodeArtifact.getAuthorizationToken(authorizationTokenRequest);
         log.info("Authorization token {}", authorizationTokenResult.getAuthorizationToken());
         var client = HttpClient.newHttpClient();
         var request = java.net.http.HttpRequest.newBuilder(
-                        URI.create(FCP_CONSTRUCT_LIB_ENDPOINT+packageName))
+                        URI.create(FCP_CONSTRUCT_LIB_ENDPOINT+ packageName))
                 .header("accept", "application/json")
                 .header("Authorization", "Bearer "+ authorizationTokenResult.getAuthorizationToken())
                 .build();
         var response = client.send(request, HttpResponse.BodyHandlers.ofString());
-        var responseBody = new ObjectMapper().readValue(response.body(), Object.class);
+        var responseBody = new ObjectMapper().readValue(response.body(), ObjectNode.class);
+        var stringNode = responseBody.toString().replaceAll(FCP_CONSTRUCT_LIB_ENDPOINT, "http://localhost:9999/");
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode modifiedData = mapper.readTree(stringNode);
+//        var tarball = responseBody.findPath("dist").get("tarball").toString();
+//        log.info("FCP_CONSTRUCT_LIB_ENDPOINT {}, tarball {}", FCP_CONSTRUCT_LIB_ENDPOINT, tarball);
+//        tarball = tarball.replaceAll(FCP_CONSTRUCT_LIB_ENDPOINT, "http://localhost:9999/");
+//        ((ObjectNode)responseBody.findPath("dist")).put("tarball", tarball);
         HttpHeaders responseHeaders = new HttpHeaders();
-        var responseEntity = ResponseEntity.ok().headers(responseHeaders).body(responseBody);
+        var responseEntity = ResponseEntity.ok().headers(responseHeaders).body(modifiedData);
         log.info("Headers {}", response.headers());
         return responseEntity;
     }

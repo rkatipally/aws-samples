@@ -28,7 +28,7 @@ public class ProxyController {
 
     private ProxyService proxyService;
 
-    @GetMapping(value = "/{packageName}/**" , produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_OCTET_STREAM_VALUE} )
+    @GetMapping(value = {"/{packageName}/**", "/{packageName}"} , produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_OCTET_STREAM_VALUE, MediaType.ALL_VALUE} )
     public ResponseEntity getNpmPackage(@PathVariable String packageName, HttpServletRequest httpServletRequest, HttpServletResponse response) throws IOException, InterruptedException {
         String path =
                 httpServletRequest.getAttribute(HandlerMapping.PATH_WITHIN_HANDLER_MAPPING_ATTRIBUTE).toString();
